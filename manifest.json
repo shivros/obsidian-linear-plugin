@@ -1,0 +1,11 @@
+{
+	"id": "linear-sync-plugin",
+	"name": "Linear Sync",
+	"version": "1.0.0",
+	"minAppVersion": "0.15.0",
+	"description": "Syncs Linear tasks within Obsidian",
+	"author": "Casey Becking",
+	"authorUrl": "",
+	"fundingUrl": "",
+	"isDesktopOnly": false
+}
