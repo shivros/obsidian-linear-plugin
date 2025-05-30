@@ -1,0 +1,62 @@
+.linear-issues-container {
+    margin: 1em 0;
+}
+
+.linear-issue {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    padding: 1em;
+    margin-bottom: 1em;
+}
+
+.linear-issue-header {
+    display: flex;
+    align-items: center;
+    gap: 1em;
+    margin-bottom: 0.5em;
+}
+
+.linear-issue-title {
+    font-weight: 600;
+    text-decoration: none;
+    flex-grow: 1;
+}
+
+.linear-issue-status {
+    font-size: 0.85em;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background-color: var(--background-modifier-border);
+}
+
+/* Status-specific styles */
+.linear-status-todo {
+    background-color: #e2e8f0;
+    color: #1a202c;
+}
+
+.linear-status-in.progress {
+    background-color: #3182ce;
+    color: white;
+}
+
+.linear-status-done {
+    background-color: #48bb78;
+    color: white;
+}
+
+.linear-status-canceled {
+    background-color: #718096;
+    color: white;
+}
+
+.linear-status-backlog {
+    background-color: #cbd5e0;
+    color: #2d3748;
+}
+
+.linear-issue-description {
+    font-size: 0.9em;
+    color: var(--text-muted);
+    margin-top: 0.5em;
+} 
