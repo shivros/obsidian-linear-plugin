@@ -4,25 +4,47 @@ This plugin integrates Linear (https://linear.app) with Obsidian (https://obsidi
 
 ## Features
 
-### Status Filtering
+### Display Options
 
-You can filter Linear issues by their status using code blocks. The plugin supports status filtering with the following features:
+You can customize how issues are displayed using options in the code block:
 
-- Filter issues by workflow status (e.g., Backlog, In Progress, Done)
-- Automatic status name resolution with fuzzy matching
-- Status-specific styling and colors
-- Efficient caching system (5-minute TTL)
-- Pagination support (100 states per page)
+#### Limit Number of Issues
 
-Example usage:
+To limit the number of issues displayed, use the `limit` option:
 
 ```linear
 limit: 5
-team: Infosec
-status: Backlog
 ```
 
-This will display up to 5 issues from the Infosec team that are in the Backlog status.
+This will show only the 5 most recent issues. If no limit is specified, all issues will be displayed.
+
+#### Filter by Team
+
+To show issues from a specific team, use the `team` option with the team's name:
+
+```linear
+team: Engineering
+```
+
+#### Filter by Status
+
+To show issues with a specific status, use the `status` option with the status name:
+
+```linear
+status: In Progress
+```
+
+The status name matching is case-insensitive and forgiving of special characters, so "inprogress" and "In Progress" will work the same way.
+
+You can combine multiple options:
+
+```linear
+team: Engineering
+status: In Progress
+limit: 3
+```
+
+This will show the 3 most recent In Progress issues from the Engineering team.
 
 ### Error Handling
 
