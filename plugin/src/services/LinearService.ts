@@ -1,4 +1,4 @@
-import { LinearClient, Issue, Team, WorkflowState } from "@linear/sdk";
+import { LinearClient, Issue, Team, WorkflowState, LinearRawResponse } from "@linear/sdk";
 import { Notice } from "obsidian";
 
 const log = (message: string, data?: any) => {
@@ -20,7 +20,11 @@ interface WorkflowStateNode {
     };
 }
 
-interface WorkflowStateResponse {
+interface GraphQLResponse<T> {
+    data: T;
+}
+
+interface WorkflowStateQueryResponse {
     workflowStates: {
         nodes: WorkflowStateNode[];
         pageInfo: {
@@ -130,7 +134,7 @@ export class LinearService {
             let after: string | null = null;
 
             while (hasNextPage) {
-                const response = await client.client.rawRequest<{ data: WorkflowStateResponse }>(`
+                const response: LinearRawResponse<WorkflowStateQueryResponse> = await client.client.rawRequest<WorkflowStateQueryResponse, { after?: string }>(`
                     query WorkflowStates${after ? '($after: String!)' : ''} {
                         workflowStates(first: 100${after ? ', after: $after' : ''}) {
                             nodes {
