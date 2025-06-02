@@ -1,16 +1,26 @@
 {
-	"name": "example-plugin",
-	"version": "1.0.0",
-	"description": "Basic example plugin for Obsidian",
+	"name": "obsidian-linear-plugin",
+	"version": "1.1.0",
+	"description": "Integrate Linear issues with advanced filtering, sorting, and visual enhancements in Obsidian",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": [],
-	"author": "",
+	"keywords": [
+		"obsidian",
+		"linear",
+		"project-management",
+		"task-management",
+		"issue-tracking"
+	],
+	"author": "Casey Becking",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/caseybecking/obsidian-linear-plugin"
+	},
 	"devDependencies": {
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
