@@ -2,6 +2,8 @@
 
 This plugin integrates Linear (https://linear.app) with Obsidian (https://obsidian.md), allowing you to embed and filter Linear issues directly in your notes.
 
+**Note: This plugin is currently desktop-only and does not support mobile devices.**
+
 ## Features
 
 ### Display Options
@@ -109,6 +111,9 @@ The plugin includes comprehensive error handling:
 - Cache management for workflow states
 
 ## Installation
+
+**Requirements:**
+- Obsidian Desktop (Mobile devices are not supported)
 
 1. Open Obsidian Settings
 2. Go to Community Plugins and disable Safe Mode
