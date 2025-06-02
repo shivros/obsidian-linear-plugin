@@ -1,6 +1,6 @@
 {
-  "id": "obsidian-linear",
-  "name": "Linear",
+  "id": "linear-plugin",
+  "name": "Linear Plugin",
   "version": "1.1.0",
   "minAppVersion": "0.15.0",
   "description": "Integrate Linear issues with advanced filtering, sorting, and visual enhancements. Features include due date indicators, status colors, and comprehensive debug logging.",
