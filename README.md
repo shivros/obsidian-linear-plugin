@@ -44,16 +44,61 @@ To show issues assigned to a specific person, use the `assignee` option with the
 assignee: user@example.com
 ```
 
-You can combine multiple options:
+#### Sort by Due Date
+
+To sort issues by their due date, use the `sorting` option:
+
+```linear
+sorting: dateascending   # Sort by due date, oldest first
+sorting: datedescending  # Sort by due date, newest first
+```
+
+#### Hide Description
+
+To show only issue titles without descriptions, use the `hideDescription` option:
+
+```linear
+hideDescription: true
+```
+
+### Combining Options
+
+You can combine multiple options to create specific views:
 
 ```linear
 team: Engineering
 status: In Progress
 assignee: user@example.com
+sorting: dateascending
+hideDescription: true
 limit: 3
 ```
 
-This will show the 3 most recent In Progress issues from the Engineering team that are assigned to the specified user.
+This will show the 3 oldest In Progress issues from the Engineering team that are assigned to the specified user, without descriptions.
+
+### Visual Enhancements
+
+#### Due Date Indicators
+
+Issues display due dates with color-coded badges and emoji indicators:
+- 📅 Due Today (orange)
+- 📅 Due Tomorrow (blue)
+- ⚠️ Overdue (red)
+- 📅 Upcoming (green)
+- 📅 No due date (gray)
+
+#### Status Colors
+
+Each status is displayed with a color-coded badge matching your Linear workflow states.
+
+### Debug Mode
+
+The plugin includes comprehensive debug logging (prefixed with 🔄) in the developer console, helping you troubleshoot:
+- API requests and responses
+- Filter applications
+- Due date calculations
+- Status matching
+- Team identification
 
 ### Error Handling
 
@@ -61,6 +106,7 @@ The plugin includes comprehensive error handling:
 - Detailed error messages showing both team and status context
 - Graceful fallback for invalid status names
 - Automatic status name normalization
+- Cache management for workflow states
 
 ## Installation
 
@@ -90,4 +136,13 @@ The plugin includes comprehensive error handling:
 
 ### Building
 
-Run `npm run build` to create a production build. 
+Run `npm run build` to create a production build.
+
+### Testing
+
+To test the plugin in Obsidian:
+1. Build the plugin using `npm run build`
+2. Copy `main.js`, `manifest.json`, and `styles.css` to your Obsidian plugins directory
+3. Enable the plugin in Obsidian
+4. Create a code block with the language set to `linear`
+5. Check the developer console (Ctrl+Shift+I or Cmd+Option+I) for debug logs 
