@@ -44,43 +44,16 @@ To show issues assigned to a specific person, use the `assignee` option with the
 assignee: user@example.com
 ```
 
-#### Sorting Issues
-
-To sort issues, use the `sorting` option. Currently supported sorting options:
-
-- `date`: sorts tasks in descending order based on due date (latest first)
-- `dateDescending`: sorts tasks in descending order based on due date (latest first)
-- `dateAscending`: sorts tasks in ascending order based on due date (earliest first)
-
-```linear
-sorting: date
-```
-
-or
-
-```linear
-sorting: dateAscending
-```
-
-or
-
-```linear
-sorting: dateDescending
-```
-
-Note: When sorting by date, only issues with due dates set will be shown.
-
 You can combine multiple options:
 
 ```linear
 team: Engineering
 status: In Progress
 assignee: user@example.com
-sorting: dateAscending
 limit: 3
 ```
 
-This will show the 3 earliest due issues from the Engineering team that are In Progress and assigned to the specified user.
+This will show the 3 most recent In Progress issues from the Engineering team that are assigned to the specified user.
 
 ### Error Handling
 
