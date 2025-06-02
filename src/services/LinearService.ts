@@ -39,6 +39,11 @@ export interface IssueOptions {
     teamName?: string;
     status?: string;
     assigneeEmail?: string;
+    sorting?: {
+        field: 'date';
+        direction: 'asc' | 'desc';
+    };
+    hideDescription?: boolean;
 }
 
 export class LinearService {
@@ -186,10 +191,6 @@ export class LinearService {
         }
     }
 
-    private normalizeStateName(name: string): string {
-        return name.toLowerCase().replace(/[^a-z0-9]/g, '');
-    }
-
     private async getStatusByName(statusName: string, teamId?: string): Promise<WorkflowState | null> {
         log(`Looking for status: "${statusName}"${teamId ? ` in team ID: ${teamId}` : ''}`);
 
@@ -213,11 +214,6 @@ export class LinearService {
                     }
                 });
                 
-                // Match if:
-                // 1. Names match (normalized)
-                // 2. AND either:
-                //    - No specific team is required, OR
-                //    - The state belongs to the required team
                 if (normalizedStateName === normalizedSearchName && 
                     (!teamId || !state.team || state.team.id === teamId)) {
                     log(`Found matching state: "${state.name}"`);
@@ -231,6 +227,10 @@ export class LinearService {
             console.error("Error finding status:", error);
             return null;
         }
+    }
+
+    private normalizeStateName(name: string): string {
+        return name.toLowerCase().replace(/[^a-z0-9]/g, '');
     }
 
     async getIssues(options?: IssueOptions): Promise<Issue[]> {
@@ -270,12 +270,45 @@ export class LinearService {
                 log(`Added assignee filter:`, filter.assignee);
             }
 
+            // Add due date filter to only get issues with due dates set when sorting by date
+            if (options?.sorting?.field === 'date') {
+                filter.dueDate = { neq: null };
+                log(`Added due date filter to get only issues with due dates`);
+            }
+
             log('Fetching issues with filter:', filter);
-            const { nodes } = await client.issues({
+            let { nodes } = await client.issues({
                 first: options?.limit,
-                filter: Object.keys(filter).length > 0 ? filter : undefined,
-                orderBy: undefined
+                filter: Object.keys(filter).length > 0 ? filter : undefined
             });
+            
+            // Sort by due date if requested
+            if (options?.sorting?.field === 'date') {
+                nodes = nodes.sort((a, b) => {
+                    if (!a.dueDate) return 1;
+                    if (!b.dueDate) return -1;
+                    const dateA = new Date(a.dueDate).getTime();
+                    const dateB = new Date(b.dueDate).getTime();
+                    return options.sorting!.direction === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+            }
+            
+            // Enhanced logging for issue details
+            for (const issue of nodes) {
+                const assignee = issue.assignee ? await issue.assignee : null;
+                log(`Issue details:`, {
+                    id: issue.id,
+                    identifier: issue.identifier,
+                    title: issue.title,
+                    dueDate: issue.dueDate,
+                    formattedDueDate: issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : 'No due date',
+                    assignee: assignee ? {
+                        id: assignee.id,
+                        name: assignee.name,
+                        email: assignee.email
+                    } : 'Unassigned'
+                });
+            }
             
             log(`Found ${nodes.length} issues`);
             return nodes;
