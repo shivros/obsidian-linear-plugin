@@ -1,11 +1,11 @@
 {
-	"id": "linear-sync-plugin",
-	"name": "Linear Sync",
-	"version": "1.0.0",
-	"minAppVersion": "0.15.0",
-	"description": "Syncs Linear tasks within Obsidian",
-	"author": "Casey Becking",
-	"authorUrl": "",
-	"fundingUrl": "",
-	"isDesktopOnly": false
-}
+  "id": "obsidian-linear",
+  "name": "Linear",
+  "version": "1.0.0",
+  "minAppVersion": "0.15.0",
+  "description": "Integrate Linear issues within your Obsidian notes",
+  "author": "Casey Becking",
+  "authorUrl": "https://github.com/caseybecking",
+  "fundingUrl": "",
+  "isDesktopOnly": false
+} 

@@ -1,20 +1,22 @@
 import { App, PluginSettingTab, Setting } from 'obsidian';
-import type LinearPlugin from './main';
+import LinearPlugin from './main';
 
 export class LinearSettingsTab extends PluginSettingTab {
-    constructor(app: App, private plugin: LinearPlugin) {
+    plugin: LinearPlugin;
+
+    constructor(app: App, plugin: LinearPlugin) {
         super(app, plugin);
+        this.plugin = plugin;
     }
 
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-
-        containerEl.createEl('h2', { text: 'Linear Plugin Settings' });
+        containerEl.createEl('h2', { text: 'Linear Settings' });
 
         new Setting(containerEl)
-            .setName('Linear API Key')
-            .setDesc('Enter your Linear API key from Linear Settings > API')
+            .setName('API Key')
+            .setDesc('Your Linear API key')
             .addText(text => text
                 .setPlaceholder('Enter your API key')
                 .setValue(this.plugin.settings.apiKey)
