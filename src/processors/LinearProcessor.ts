@@ -1,12 +1,13 @@
-import { MarkdownPostProcessorContext } from "obsidian";
+import { MarkdownPostProcessorContext, MarkdownRenderer, Component } from "obsidian";
 import { LinearService, IssueOptions } from "../services/LinearService";
 import type { Issue, WorkflowState } from "@linear/sdk";
 
-export class LinearProcessor {
+export class LinearProcessor extends Component {
     private linearService: LinearService;
     readonly apiKey: string;
 
     constructor(apiKey: string) {
+        super();
         this.apiKey = apiKey;
         this.linearService = new LinearService(apiKey);
     }
@@ -71,7 +72,7 @@ export class LinearProcessor {
         return options;
     }
 
-    private async renderIssue(container: HTMLDivElement, issue: Issue, options: IssueOptions) {
+    private async renderIssue(container: HTMLDivElement, issue: Issue, options: IssueOptions, ctx: MarkdownPostProcessorContext) {
         console.log('Rendering issue:', {
             id: issue.id,
             identifier: issue.identifier,
@@ -157,10 +158,13 @@ export class LinearProcessor {
 
         // Add description if available and not hidden
         if (!options.hideDescription && issue.description) {
-            issueEl.createDiv({
-                cls: "linear-issue-description",
-                text: issue.description
-            });
+            const descriptionEl = issueEl.createDiv({ cls: "linear-issue-description" });
+            await MarkdownRenderer.renderMarkdown(
+                issue.description,
+                descriptionEl,
+                ctx.sourcePath,
+                this
+            );
         }
     }
 
@@ -193,7 +197,7 @@ export class LinearProcessor {
 
             const container = el.createDiv({ cls: "linear-issues-container" });
             for (const issue of issues) {
-                await this.renderIssue(container, issue, options);
+                await this.renderIssue(container, issue, options, ctx);
             }
 
         } catch (error) {
