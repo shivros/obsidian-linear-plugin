@@ -270,12 +270,6 @@ export class LinearService {
                 log(`Added assignee filter:`, filter.assignee);
             }
 
-            // Add due date filter to only get issues with due dates set when sorting by date
-            if (options?.sorting?.field === 'date') {
-                filter.dueDate = { neq: null };
-                log(`Added due date filter to get only issues with due dates`);
-            }
-
             log('Fetching issues with filter:', filter);
             let { nodes } = await client.issues({
                 first: options?.limit,
@@ -284,12 +278,33 @@ export class LinearService {
             
             // Sort by due date if requested
             if (options?.sorting?.field === 'date') {
+                log('Sorting issues by due date', {
+                    direction: options.sorting.direction,
+                    totalIssues: nodes.length,
+                    issuesWithDueDate: nodes.filter(n => n.dueDate).length
+                });
+
                 nodes = nodes.sort((a, b) => {
+                    // If sorting ascending: null dates go to the end
+                    // If sorting descending: null dates go to the end
+                    if (!a.dueDate && !b.dueDate) return 0;
                     if (!a.dueDate) return 1;
                     if (!b.dueDate) return -1;
+
                     const dateA = new Date(a.dueDate).getTime();
                     const dateB = new Date(b.dueDate).getTime();
                     return options.sorting!.direction === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+
+                log('Sorting complete', {
+                    firstIssue: nodes[0] ? {
+                        identifier: nodes[0].identifier,
+                        dueDate: nodes[0].dueDate
+                    } : 'no issues',
+                    lastIssue: nodes[nodes.length - 1] ? {
+                        identifier: nodes[nodes.length - 1].identifier,
+                        dueDate: nodes[nodes.length - 1].dueDate
+                    } : 'no issues'
                 });
             }
             
