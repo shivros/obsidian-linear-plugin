@@ -54,12 +54,17 @@ var LinearSettingsTab = class extends import_obsidian.PluginSettingTab {
       this.plugin.settings.apiKey = value;
       await this.plugin.saveSettings();
     }));
+    new import_obsidian.Setting(containerEl).setName("Debug Mode").setDesc("Enable debug logging in the console").addToggle((toggle) => toggle.setValue(this.plugin.settings.debugMode).onChange(async (value) => {
+      this.plugin.settings.debugMode = value;
+      await this.plugin.saveSettings();
+    }));
   }
 };
 
 // src/settings.ts
 var DEFAULT_SETTINGS = {
-  apiKey: ""
+  apiKey: "",
+  debugMode: false
 };
 
 // src/processors/LinearProcessor.ts
@@ -13974,73 +13979,70 @@ var GI = class extends DT {
 
 // src/services/LinearService.ts
 var import_obsidian2 = require("obsidian");
-var log = (message, data) => {
-  const prefix = "\u{1F504} Linear Plugin: ";
-  if (data) {
-    console.log(prefix + message, data);
-  } else {
-    console.log(prefix + message);
-  }
-};
 var LinearService = class {
   // 5 minutes in milliseconds
-  constructor(apiKey) {
-    this.apiKey = apiKey;
+  constructor(settings) {
+    this.settings = settings;
     this.client = null;
     this.teamCache = /* @__PURE__ */ new Map();
     // name -> id mapping
     this.workflowStatesCache = null;
     this.CACHE_TTL = 5 * 60 * 1e3;
-    if (apiKey) {
-      this.client = new GI({ apiKey });
-      log("Service initialized with API key");
+    if (settings.apiKey) {
+      this.client = new GI({ apiKey: settings.apiKey });
+      this.log("Service initialized with API key");
     } else {
-      log("Service initialized without API key");
+      this.log("Service initialized without API key");
+    }
+  }
+  log(message, data, isError = false) {
+    if (!this.settings.debugMode)
+      return;
+    const prefix = "\u{1F504} Linear Plugin: ";
+    if (isError) {
+      console.error(prefix + message, data);
+    } else {
+      console.log(prefix + message, data || "");
     }
   }
   async ensureClient() {
-    if (!this.apiKey) {
+    if (!this.settings.apiKey) {
       throw new Error("Linear API key not configured");
     }
     if (!this.client) {
-      this.client = new GI({ apiKey: this.apiKey });
-      log("Created new Linear client");
+      this.client = new GI({ apiKey: this.settings.apiKey });
+      this.log("Created new Linear client");
     }
     return this.client;
   }
   async getTeams() {
     try {
-      log("Fetching teams...");
+      this.log("Fetching teams...");
       const client = await this.ensureClient();
       const { nodes } = await client.teams();
-      log("Teams fetched:", nodes.map((t2) => ({ id: t2.id, name: t2.name })));
+      this.log("Teams fetched:", nodes.map((t2) => ({ id: t2.id, name: t2.name })));
       return nodes;
     } catch (error) {
-      console.error("Error fetching teams:", error);
+      this.log("Failed to fetch teams - API error", error, true);
       throw new Error("Failed to fetch teams");
     }
   }
   async getTeamIdByName(teamName) {
-    log(`Looking for team: "${teamName}"`);
-    const cachedId = this.teamCache.get(teamName.toLowerCase());
-    if (cachedId) {
-      log(`Found team "${teamName}" in cache with ID: ${cachedId}`);
-      return cachedId;
-    }
+    this.log(`Looking for team: "${teamName}"`);
     try {
       const teams = await this.getTeams();
       for (const team of teams) {
         const name = team.name.toLowerCase();
         this.teamCache.set(name, team.id);
         if (name === teamName.toLowerCase()) {
-          log(`Found team "${teamName}" with ID: ${team.id}`);
+          this.log(`Found team "${teamName}" with ID: ${team.id}`);
           return team.id;
         }
       }
-      log(`Team "${teamName}" not found`);
+      this.log(`Team "${teamName}" not found`);
       return null;
     } catch (error) {
-      console.error("Error finding team:", error);
+      this.log("Failed to find team - API error", error, true);
       return null;
     }
   }
@@ -14051,10 +14053,10 @@ var LinearService = class {
     var _a2, _b2;
     try {
       if (this.isCacheValid()) {
-        log("Using cached workflow states");
+        this.log("Using cached workflow states");
         return this.workflowStatesCache.states;
       }
-      log("Fetching workflow states...");
+      this.log("Fetching workflow states...");
       const client = await this.ensureClient();
       let allStates = [];
       let hasNextPage = true;
@@ -14086,31 +14088,31 @@ var LinearService = class {
         allStates = allStates.concat(nodes);
         hasNextPage = pageInfo.hasNextPage;
         after = pageInfo.endCursor;
-        log(`Fetched ${nodes.length} workflow states${hasNextPage ? ", fetching more..." : ""}`);
+        this.log(`Fetched ${nodes.length} workflow states${hasNextPage ? ", fetching more..." : ""}`);
       }
       this.workflowStatesCache = {
         timestamp: Date.now(),
         states: allStates
       };
-      log("All workflow states fetched:", allStates.map((s2) => ({
+      this.log("All workflow states fetched:", allStates.map((s2) => ({
         id: s2.id,
         name: s2.name,
         team: s2.team ? `${s2.team.name} (${s2.team.id})` : "no team"
       })));
       return allStates;
     } catch (error) {
-      console.error("Error fetching workflow states:", error);
+      this.log("Error fetching workflow states", error);
       throw new Error("Failed to fetch workflow states");
     }
   }
   async getStatusByName(statusName, teamId) {
-    log(`Looking for status: "${statusName}"${teamId ? ` in team ID: ${teamId}` : ""}`);
+    this.log(`Looking for status: "${statusName}"${teamId ? ` in team ID: ${teamId}` : ""}`);
     try {
       const states = await this.getWorkflowStates();
       const normalizedSearchName = this.normalizeStateName(statusName);
       for (const state of states) {
         const normalizedStateName = this.normalizeStateName(state.name);
-        log(`Checking state: "${state.name}" (${state.id})`, {
+        this.log(`Checking state: "${state.name}" (${state.id})`, {
           matches: {
             name: normalizedStateName === normalizedSearchName,
             team: !teamId || !state.team || state.team.id === teamId
@@ -14123,14 +14125,14 @@ var LinearService = class {
           }
         });
         if (normalizedStateName === normalizedSearchName && (!teamId || !state.team || state.team.id === teamId)) {
-          log(`Found matching state: "${state.name}"`);
+          this.log(`Found matching state: "${state.name}"`);
           return state;
         }
       }
-      log(`No matching state found for "${statusName}"`);
+      this.log(`No matching state found for "${statusName}"`);
       return null;
     } catch (error) {
-      console.error("Error finding status:", error);
+      this.log("Error finding status", error);
       return null;
     }
   }
@@ -14140,43 +14142,43 @@ var LinearService = class {
   async getIssues(options) {
     var _a2;
     try {
-      log("Getting issues with options:", options);
+      this.log("Getting issues with options:", options);
       const client = await this.ensureClient();
       let teamId = void 0;
       const filter = {};
       if (options == null ? void 0 : options.teamName) {
         const fetchedTeamId = await this.getTeamIdByName(options.teamName);
         if (!fetchedTeamId) {
-          log(`Team "${options.teamName}" not found`);
+          this.log(`Team "${options.teamName}" not found - skipping query`);
           new import_obsidian2.Notice(`Team "${options.teamName}" not found`);
           return [];
         }
         teamId = fetchedTeamId;
         filter.team = { id: { eq: teamId } };
-        log(`Added team filter:`, filter.team);
+        this.log(`Added team filter:`, filter.team);
       }
       if (options == null ? void 0 : options.status) {
         const state = await this.getStatusByName(options.status, teamId);
         if (!state) {
           const message = `Status "${options.status}" not found${teamId ? " for the specified team" : ""}`;
-          log(message);
+          this.log(message);
           new import_obsidian2.Notice(message);
           return [];
         }
         filter.state = { id: { eq: state.id } };
-        log(`Added status filter:`, filter.state);
+        this.log(`Added status filter:`, filter.state);
       }
       if (options == null ? void 0 : options.assigneeEmail) {
         filter.assignee = { email: { eq: options.assigneeEmail } };
-        log(`Added assignee filter:`, filter.assignee);
+        this.log(`Added assignee filter:`, filter.assignee);
       }
-      log("Fetching issues with filter:", filter);
+      this.log("Fetching issues with filter:", filter);
       let { nodes } = await client.issues({
         first: options == null ? void 0 : options.limit,
         filter: Object.keys(filter).length > 0 ? filter : void 0
       });
       if (((_a2 = options == null ? void 0 : options.sorting) == null ? void 0 : _a2.field) === "date") {
-        log("Sorting issues by due date", {
+        this.log("Sorting issues by due date", {
           direction: options.sorting.direction,
           totalIssues: nodes.length,
           issuesWithDueDate: nodes.filter((n2) => n2.dueDate).length
@@ -14192,7 +14194,7 @@ var LinearService = class {
           const dateB = new Date(b2.dueDate).getTime();
           return options.sorting.direction === "asc" ? dateA - dateB : dateB - dateA;
         });
-        log("Sorting complete", {
+        this.log("Sorting complete", {
           firstIssue: nodes[0] ? {
             identifier: nodes[0].identifier,
             dueDate: nodes[0].dueDate
@@ -14205,7 +14207,7 @@ var LinearService = class {
       }
       for (const issue of nodes) {
         const assignee = issue.assignee ? await issue.assignee : null;
-        log(`Issue details:`, {
+        this.log(`Issue details:`, {
           id: issue.id,
           identifier: issue.identifier,
           title: issue.title,
@@ -14218,10 +14220,10 @@ var LinearService = class {
           } : "Unassigned"
         });
       }
-      log(`Found ${nodes.length} issues`);
+      this.log(`Found ${nodes.length} issues`);
       return nodes;
     } catch (error) {
-      console.error("Error fetching Linear issues:", error);
+      this.log("Failed to fetch Linear issues - API error", error, true);
       new import_obsidian2.Notice("Failed to fetch Linear issues");
       return [];
     }
@@ -14230,10 +14232,20 @@ var LinearService = class {
 
 // src/processors/LinearProcessor.ts
 var LinearProcessor = class extends import_obsidian3.Component {
-  constructor(apiKey) {
+  constructor(settings) {
     super();
-    this.apiKey = apiKey;
-    this.linearService = new LinearService(apiKey);
+    this.settings = settings;
+    this.linearService = new LinearService(settings);
+  }
+  log(message, data, isError = false) {
+    if (!this.settings.debugMode)
+      return;
+    const prefix = "\u{1F504} Linear Plugin: ";
+    if (isError) {
+      console.error(prefix + message, data);
+    } else {
+      console.log(prefix + message, data || "");
+    }
   }
   parseOptions(source) {
     const options = {};
@@ -14287,97 +14299,100 @@ var LinearProcessor = class extends import_obsidian3.Component {
         }
       }
     } catch (error) {
-      console.error("Error parsing Linear block options:", error);
+      this.log("Failed to parse Linear block options", error, true);
     }
     return options;
   }
   async renderIssue(container, issue, options, ctx) {
-    console.log("Rendering issue:", {
+    this.log("Rendering issue:", {
       id: issue.id,
       identifier: issue.identifier,
       title: issue.title,
       dueDate: issue.dueDate,
       formattedDueDate: issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : "No due date"
     });
-    const issueEl = container.createDiv({ cls: "linear-issue" });
-    const headerEl = issueEl.createDiv({ cls: "linear-issue-header" });
-    const link = headerEl.createEl("a", {
-      cls: "linear-issue-title",
-      href: issue.url,
-      text: `${issue.identifier}: ${issue.title}`
-    });
-    link.setAttribute("target", "_blank");
-    const metadataEl = issueEl.createDiv({ cls: "linear-issue-metadata" });
-    if (issue.dueDate) {
-      console.log("Processing due date:", issue.dueDate);
-      const dueDate = new Date(issue.dueDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      let dueDateText = "";
-      let dueDateClass = "";
-      if (dueDate.toDateString() === today.toDateString()) {
-        dueDateText = "\u{1F4C5} Due Today";
-        dueDateClass = "due-today";
-      } else if (dueDate.toDateString() === tomorrow.toDateString()) {
-        dueDateText = "\u{1F4C5} Due Tomorrow";
-        dueDateClass = "due-tomorrow";
-      } else if (dueDate < today) {
-        dueDateText = `\u26A0\uFE0F Overdue: ${dueDate.toLocaleDateString()}`;
-        dueDateClass = "overdue";
-      } else {
-        dueDateText = `\u{1F4C5} Due: ${dueDate.toLocaleDateString()}`;
-        dueDateClass = "upcoming";
-      }
-      console.log("Creating due date element:", {
-        text: dueDateText,
-        class: dueDateClass,
-        originalDate: issue.dueDate,
-        parsedDate: dueDate,
-        comparison: {
-          isToday: dueDate.toDateString() === today.toDateString(),
-          isTomorrow: dueDate.toDateString() === tomorrow.toDateString(),
-          isOverdue: dueDate < today
+    try {
+      const issueEl = container.createDiv({ cls: "linear-issue" });
+      const headerEl = issueEl.createDiv({ cls: "linear-issue-header" });
+      const link = headerEl.createEl("a", {
+        cls: "linear-issue-title",
+        href: issue.url,
+        text: `${issue.identifier}: ${issue.title}`
+      });
+      link.setAttribute("target", "_blank");
+      const metadataEl = issueEl.createDiv({ cls: "linear-issue-metadata" });
+      if (issue.dueDate) {
+        this.log("Processing due date:", issue.dueDate);
+        const dueDate = new Date(issue.dueDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        let dueDateText = "";
+        let dueDateClass = "";
+        if (dueDate.toDateString() === today.toDateString()) {
+          dueDateText = "\u{1F4C5} Due Today";
+          dueDateClass = "due-today";
+        } else if (dueDate.toDateString() === tomorrow.toDateString()) {
+          dueDateText = "\u{1F4C5} Due Tomorrow";
+          dueDateClass = "due-tomorrow";
+        } else if (dueDate < today) {
+          dueDateText = `\u26A0\uFE0F Overdue: ${dueDate.toLocaleDateString()}`;
+          dueDateClass = "overdue";
+        } else {
+          dueDateText = `\u{1F4C5} Due: ${dueDate.toLocaleDateString()}`;
+          dueDateClass = "upcoming";
         }
+        this.log("Creating due date element:", {
+          text: dueDateText,
+          class: dueDateClass,
+          originalDate: issue.dueDate,
+          parsedDate: dueDate
+        });
+        metadataEl.createSpan({
+          cls: `linear-issue-due-date ${dueDateClass}`,
+          text: dueDateText
+        });
+      } else {
+        this.log("No due date for issue");
+        metadataEl.createSpan({
+          cls: "linear-issue-due-date no-date",
+          text: "\u{1F4C5} No due date"
+        });
+      }
+      if (issue.state) {
+        const state = await issue.state;
+        headerEl.createSpan({
+          cls: `linear-issue-status linear-status-${state.name.toLowerCase()}`,
+          text: state.name
+        });
+      }
+      if (!options.hideDescription && issue.description) {
+        const descriptionEl = issueEl.createDiv({ cls: "linear-issue-description" });
+        await import_obsidian3.MarkdownRenderer.renderMarkdown(
+          issue.description,
+          descriptionEl,
+          ctx.sourcePath,
+          this
+        );
+      }
+    } catch (error) {
+      this.log("Failed to render issue", error, true);
+      container.createDiv({
+        cls: "linear-error",
+        text: `Failed to render issue ${issue.identifier}`
       });
-      const dueDateEl = metadataEl.createSpan({
-        cls: `linear-issue-due-date ${dueDateClass}`,
-        text: dueDateText
-      });
-    } else {
-      console.log("Issue has no due date");
-      metadataEl.createSpan({
-        cls: "linear-issue-due-date no-date",
-        text: "\u{1F4C5} No due date"
-      });
-    }
-    if (issue.state) {
-      const state = await issue.state;
-      headerEl.createSpan({
-        cls: `linear-issue-status linear-status-${state.name.toLowerCase()}`,
-        text: state.name
-      });
-    }
-    if (!options.hideDescription && issue.description) {
-      const descriptionEl = issueEl.createDiv({ cls: "linear-issue-description" });
-      await import_obsidian3.MarkdownRenderer.renderMarkdown(
-        issue.description,
-        descriptionEl,
-        ctx.sourcePath,
-        this
-      );
     }
   }
   async process(source, el2, ctx) {
+    this.log("Processing Linear block with source:", source);
+    el2.empty();
+    el2.createEl("p", { text: "Loading Linear issues..." });
     try {
-      console.log("Processing Linear block with source:", source);
-      el2.empty();
-      el2.createEl("p", { text: "Loading Linear issues..." });
       const options = this.parseOptions(source);
-      console.log("Parsed options:", options);
+      this.log("Parsed options:", options);
       const issues = await this.linearService.getIssues(options);
-      console.log("Fetched issues:", issues);
+      this.log("Fetched issues:", issues);
       el2.empty();
       if (!issues.length) {
         const messages = [];
@@ -14390,7 +14405,7 @@ var LinearProcessor = class extends import_obsidian3.Component {
         if (options.sorting)
           messages.push(`sorted by ${options.sorting.field} ${options.sorting.direction}`);
         const message = messages.length ? `No issues found for ${messages.join(" and ")}` : "No issues found";
-        console.log("No issues found:", message);
+        this.log("No matching issues:", message);
         el2.createEl("p", { text: message });
         return;
       }
@@ -14399,61 +14414,69 @@ var LinearProcessor = class extends import_obsidian3.Component {
         await this.renderIssue(container, issue, options, ctx);
       }
     } catch (error) {
-      console.error("Error processing Linear block:", error);
+      this.log("Failed to process Linear block", error, true);
       el2.empty();
-      el2.createEl("p", { text: "Error loading Linear issues" });
+      el2.createDiv({
+        cls: "linear-error",
+        text: "Error loading Linear issues. Please check the console for details."
+      });
     }
   }
 };
 
 // src/main.ts
-var DEBUG_PREFIX = "\u{1F504} Linear Plugin:";
-function debug(message, data) {
-  if (data) {
-    console.log(DEBUG_PREFIX, message, data);
-  } else {
-    console.log(DEBUG_PREFIX, message);
-  }
-}
 var LinearPlugin = class extends import_obsidian4.Plugin {
+  log(message, data, isError = false) {
+    var _a2;
+    if (!((_a2 = this.settings) == null ? void 0 : _a2.debugMode))
+      return;
+    const prefix = "\u{1F504} Linear Plugin: ";
+    if (isError) {
+      console.error(prefix + message, data);
+    } else {
+      console.log(prefix + message, data || "");
+    }
+  }
   async onload() {
-    debug("Loading plugin");
+    this.log("Loading plugin");
     await this.loadSettings();
-    debug("Settings loaded", this.settings);
+    this.log("Settings loaded", this.settings);
     this.addSettingTab(new LinearSettingsTab(this.app, this));
-    debug("Settings tab added");
+    this.log("Settings tab added");
     this.registerMarkdownCodeBlockProcessor("linear", async (source, el2, ctx) => {
-      debug("Processing Linear code block", { source });
+      this.log("Processing Linear code block", { source });
       if (!this.settings.apiKey) {
-        debug("No API key configured");
+        this.log("No API key configured - cannot process block");
         const div = el2.createDiv();
         div.setText("Please configure your Linear API key in settings.");
         return;
       }
-      if (!this.processor || this.processor["apiKey"] !== this.settings.apiKey) {
-        debug("Creating new Linear processor");
-        this.processor = new LinearProcessor(this.settings.apiKey);
+      if (!this.processor) {
+        this.log("Creating new Linear processor");
+        this.processor = new LinearProcessor(this.settings);
       }
       try {
         const div = el2.createDiv();
         await this.processor.process(source, div, ctx);
       } catch (error) {
-        debug("Error processing Linear block", error);
-        const div = el2.createDiv();
-        div.setText("Error processing Linear block. Check console for details.");
+        this.log("Failed to process Linear block", error, true);
+        el2.createEl("div", {
+          cls: "linear-error",
+          text: "Error loading Linear issues. Please check the console for details."
+        });
       }
     });
-    debug("Plugin loaded successfully");
+    this.log("Plugin loaded successfully");
   }
   onunload() {
-    debug("Plugin unloaded");
+    this.log("Plugin unloaded");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
-    debug("Settings loaded", this.settings);
+    this.log("Settings loaded", this.settings);
   }
   async saveSettings() {
     await this.saveData(this.settings);
-    debug("Settings saved", this.settings);
+    this.log("Settings saved", this.settings);
   }
 };

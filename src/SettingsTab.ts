@@ -24,5 +24,15 @@ export class LinearSettingsTab extends PluginSettingTab {
                     this.plugin.settings.apiKey = value;
                     await this.plugin.saveSettings();
                 }));
+
+        new Setting(containerEl)
+            .setName('Debug Mode')
+            .setDesc('Enable debug logging in the console')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.debugMode)
+                .onChange(async (value) => {
+                    this.plugin.settings.debugMode = value;
+                    await this.plugin.saveSettings();
+                }));
     }
 } 

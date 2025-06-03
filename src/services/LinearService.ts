@@ -1,14 +1,6 @@
 import { LinearClient, Issue, Team, WorkflowState, LinearRawResponse } from "@linear/sdk";
 import { Notice } from "obsidian";
-
-const log = (message: string, data?: any) => {
-    const prefix = '🔄 Linear Plugin: ';
-    if (data) {
-        console.log(prefix + message, data);
-    } else {
-        console.log(prefix + message);
-    }
-};
+import { LinearPluginSettings } from '../settings';
 
 interface WorkflowStateNode {
     id: string;
@@ -18,10 +10,6 @@ interface WorkflowStateNode {
         id: string;
         name: string;
     };
-}
-
-interface GraphQLResponse<T> {
-    data: T;
 }
 
 interface WorkflowStateQueryResponse {
@@ -55,23 +43,34 @@ export class LinearService {
     } | null = null;
     private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-    constructor(private apiKey: string) {
-        if (apiKey) {
-            this.client = new LinearClient({ apiKey });
-            log('Service initialized with API key');
+    constructor(private settings: LinearPluginSettings) {
+        if (settings.apiKey) {
+            this.client = new LinearClient({ apiKey: settings.apiKey });
+            this.log('Service initialized with API key');
         } else {
-            log('Service initialized without API key');
+            this.log('Service initialized without API key');
+        }
+    }
+
+    private log(message: string, data?: any, isError: boolean = false) {
+        if (!this.settings.debugMode) return;
+        
+        const prefix = '🔄 Linear Plugin: ';
+        if (isError) {
+            console.error(prefix + message, data);
+        } else {
+            console.log(prefix + message, data || '');
         }
     }
 
     private async ensureClient(): Promise<LinearClient> {
-        if (!this.apiKey) {
+        if (!this.settings.apiKey) {
             throw new Error("Linear API key not configured");
         }
 
         if (!this.client) {
-            this.client = new LinearClient({ apiKey: this.apiKey });
-            log('Created new Linear client');
+            this.client = new LinearClient({ apiKey: this.settings.apiKey });
+            this.log('Created new Linear client');
         }
 
         return this.client;
@@ -79,41 +78,34 @@ export class LinearService {
 
     async getTeams(): Promise<Team[]> {
         try {
-            log('Fetching teams...');
+            this.log('Fetching teams...');
             const client = await this.ensureClient();
             const { nodes } = await client.teams();
-            log('Teams fetched:', nodes.map(t => ({ id: t.id, name: t.name })));
+            this.log('Teams fetched:', nodes.map(t => ({ id: t.id, name: t.name })));
             return nodes;
         } catch (error) {
-            console.error("Error fetching teams:", error);
+            this.log('Failed to fetch teams - API error', error, true);
             throw new Error("Failed to fetch teams");
         }
     }
 
     private async getTeamIdByName(teamName: string): Promise<string | null> {
-        log(`Looking for team: "${teamName}"`);
+        this.log(`Looking for team: "${teamName}"`);
         
-        // Check cache first
-        const cachedId = this.teamCache.get(teamName.toLowerCase());
-        if (cachedId) {
-            log(`Found team "${teamName}" in cache with ID: ${cachedId}`);
-            return cachedId;
-        }
-
         try {
             const teams = await this.getTeams();
             for (const team of teams) {
                 const name = team.name.toLowerCase();
                 this.teamCache.set(name, team.id); // Cache for future use
                 if (name === teamName.toLowerCase()) {
-                    log(`Found team "${teamName}" with ID: ${team.id}`);
+                    this.log(`Found team "${teamName}" with ID: ${team.id}`);
                     return team.id;
                 }
             }
-            log(`Team "${teamName}" not found`);
+            this.log(`Team "${teamName}" not found`);
             return null;
         } catch (error) {
-            console.error("Error finding team:", error);
+            this.log('Failed to find team - API error', error, true);
             return null;
         }
     }
@@ -129,11 +121,11 @@ export class LinearService {
         try {
             // Check cache first
             if (this.isCacheValid()) {
-                log('Using cached workflow states');
+                this.log('Using cached workflow states');
                 return this.workflowStatesCache!.states;
             }
 
-            log('Fetching workflow states...');
+            this.log('Fetching workflow states...');
             const client = await this.ensureClient();
             let allStates: WorkflowStateNode[] = [];
             let hasNextPage = true;
@@ -169,7 +161,7 @@ export class LinearService {
                 hasNextPage = pageInfo.hasNextPage;
                 after = pageInfo.endCursor;
 
-                log(`Fetched ${nodes.length} workflow states${hasNextPage ? ', fetching more...' : ''}`);
+                this.log(`Fetched ${nodes.length} workflow states${hasNextPage ? ', fetching more...' : ''}`);
             }
 
             // Update cache
@@ -178,7 +170,7 @@ export class LinearService {
                 states: allStates
             };
 
-            log('All workflow states fetched:', allStates.map(s => ({
+            this.log('All workflow states fetched:', allStates.map(s => ({
                 id: s.id,
                 name: s.name,
                 team: s.team ? `${s.team.name} (${s.team.id})` : 'no team'
@@ -186,13 +178,13 @@ export class LinearService {
             
             return allStates;
         } catch (error) {
-            console.error("Error fetching workflow states:", error);
+            this.log('Error fetching workflow states', error);
             throw new Error("Failed to fetch workflow states");
         }
     }
 
     private async getStatusByName(statusName: string, teamId?: string): Promise<WorkflowState | null> {
-        log(`Looking for status: "${statusName}"${teamId ? ` in team ID: ${teamId}` : ''}`);
+        this.log(`Looking for status: "${statusName}"${teamId ? ` in team ID: ${teamId}` : ''}`);
 
         try {
             const states = await this.getWorkflowStates();
@@ -201,7 +193,7 @@ export class LinearService {
             for (const state of states) {
                 const normalizedStateName = this.normalizeStateName(state.name);
                 
-                log(`Checking state: "${state.name}" (${state.id})`, {
+                this.log(`Checking state: "${state.name}" (${state.id})`, {
                     matches: {
                         name: normalizedStateName === normalizedSearchName,
                         team: !teamId || !state.team || state.team.id === teamId
@@ -216,15 +208,15 @@ export class LinearService {
                 
                 if (normalizedStateName === normalizedSearchName && 
                     (!teamId || !state.team || state.team.id === teamId)) {
-                    log(`Found matching state: "${state.name}"`);
+                    this.log(`Found matching state: "${state.name}"`);
                     return state as unknown as WorkflowState;
                 }
             }
             
-            log(`No matching state found for "${statusName}"`);
+            this.log(`No matching state found for "${statusName}"`);
             return null;
         } catch (error) {
-            console.error("Error finding status:", error);
+            this.log('Error finding status', error);
             return null;
         }
     }
@@ -235,7 +227,7 @@ export class LinearService {
 
     async getIssues(options?: IssueOptions): Promise<Issue[]> {
         try {
-            log('Getting issues with options:', options);
+            this.log('Getting issues with options:', options);
             
             const client = await this.ensureClient();
             let teamId: string | undefined = undefined;
@@ -244,33 +236,33 @@ export class LinearService {
             if (options?.teamName) {
                 const fetchedTeamId = await this.getTeamIdByName(options.teamName);
                 if (!fetchedTeamId) {
-                    log(`Team "${options.teamName}" not found`);
+                    this.log(`Team "${options.teamName}" not found - skipping query`);
                     new Notice(`Team "${options.teamName}" not found`);
                     return [];
                 }
                 teamId = fetchedTeamId;
                 filter.team = { id: { eq: teamId } };
-                log(`Added team filter:`, filter.team);
+                this.log(`Added team filter:`, filter.team);
             }
 
             if (options?.status) {
                 const state = await this.getStatusByName(options.status, teamId);
                 if (!state) {
                     const message = `Status "${options.status}" not found${teamId ? ' for the specified team' : ''}`;
-                    log(message);
+                    this.log(message);
                     new Notice(message);
                     return [];
                 }
                 filter.state = { id: { eq: state.id } };
-                log(`Added status filter:`, filter.state);
+                this.log(`Added status filter:`, filter.state);
             }
 
             if (options?.assigneeEmail) {
                 filter.assignee = { email: { eq: options.assigneeEmail } };
-                log(`Added assignee filter:`, filter.assignee);
+                this.log(`Added assignee filter:`, filter.assignee);
             }
 
-            log('Fetching issues with filter:', filter);
+            this.log('Fetching issues with filter:', filter);
             let { nodes } = await client.issues({
                 first: options?.limit,
                 filter: Object.keys(filter).length > 0 ? filter : undefined
@@ -278,7 +270,7 @@ export class LinearService {
             
             // Sort by due date if requested
             if (options?.sorting?.field === 'date') {
-                log('Sorting issues by due date', {
+                this.log('Sorting issues by due date', {
                     direction: options.sorting.direction,
                     totalIssues: nodes.length,
                     issuesWithDueDate: nodes.filter(n => n.dueDate).length
@@ -296,7 +288,7 @@ export class LinearService {
                     return options.sorting!.direction === 'asc' ? dateA - dateB : dateB - dateA;
                 });
 
-                log('Sorting complete', {
+                this.log('Sorting complete', {
                     firstIssue: nodes[0] ? {
                         identifier: nodes[0].identifier,
                         dueDate: nodes[0].dueDate
@@ -311,7 +303,7 @@ export class LinearService {
             // Enhanced logging for issue details
             for (const issue of nodes) {
                 const assignee = issue.assignee ? await issue.assignee : null;
-                log(`Issue details:`, {
+                this.log(`Issue details:`, {
                     id: issue.id,
                     identifier: issue.identifier,
                     title: issue.title,
@@ -325,10 +317,10 @@ export class LinearService {
                 });
             }
             
-            log(`Found ${nodes.length} issues`);
+            this.log(`Found ${nodes.length} issues`);
             return nodes;
         } catch (error) {
-            console.error("Error fetching Linear issues:", error);
+            this.log('Failed to fetch Linear issues - API error', error, true);
             new Notice("Failed to fetch Linear issues");
             return [];
         }
