@@ -14251,8 +14251,10 @@ var LinearProcessor = class extends import_obsidian3.Component {
     const options = {};
     try {
       const lines = source.trim().split("\n");
+      this.log("Parsing options from lines:", lines);
       for (const line of lines) {
         const [key, value] = line.split(":").map((s2) => s2.trim());
+        this.log("Processing option line:", { key, value });
         switch (key) {
           case "limit":
             const limitValue = parseInt(value);
@@ -14292,18 +14294,27 @@ var LinearProcessor = class extends import_obsidian3.Component {
             }
             break;
           case "hideDescription":
+            this.log("Processing hideDescription option:", { value, lowercased: value == null ? void 0 : value.toLowerCase() });
             if (value && value.toLowerCase() === "true") {
               options.hideDescription = true;
+              this.log("hideDescription set to true");
+            } else {
+              this.log("hideDescription not set to true", {
+                reason: !value ? "no value" : 'value not "true"',
+                valueProvided: value
+              });
             }
             break;
         }
       }
+      this.log("Final parsed options:", options);
     } catch (error) {
       this.log("Failed to parse Linear block options", error, true);
     }
     return options;
   }
   async renderIssue(container, issue, options, ctx) {
+    var _a2;
     this.log("Rendering issue:", {
       id: issue.id,
       identifier: issue.identifier,
@@ -14368,6 +14379,11 @@ var LinearProcessor = class extends import_obsidian3.Component {
         });
       }
       if (!options.hideDescription && issue.description) {
+        this.log("Rendering description", {
+          hideDescription: options.hideDescription,
+          hasDescription: !!issue.description,
+          descriptionLength: (_a2 = issue.description) == null ? void 0 : _a2.length
+        });
         const descriptionEl = issueEl.createDiv({ cls: "linear-issue-description" });
         await import_obsidian3.MarkdownRenderer.renderMarkdown(
           issue.description,
@@ -14375,6 +14391,12 @@ var LinearProcessor = class extends import_obsidian3.Component {
           ctx.sourcePath,
           this
         );
+      } else {
+        this.log("Skipping description", {
+          hideDescription: options.hideDescription,
+          hasDescription: !!issue.description,
+          reason: !issue.description ? "no description" : "hideDescription is true"
+        });
       }
     } catch (error) {
       this.log("Failed to render issue", error, true);

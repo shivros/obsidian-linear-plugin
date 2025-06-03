@@ -28,8 +28,12 @@ export class LinearProcessor extends Component {
         try {
             // Split the source into lines and process each line
             const lines = source.trim().split('\n');
+            this.log('Parsing options from lines:', lines);
+            
             for (const line of lines) {
                 const [key, value] = line.split(':').map(s => s.trim());
+                this.log('Processing option line:', { key, value });
+                
                 switch (key) {
                     case 'limit':
                         const limitValue = parseInt(value);
@@ -69,12 +73,21 @@ export class LinearProcessor extends Component {
                         }
                         break;
                     case 'hideDescription':
+                        this.log('Processing hideDescription option:', { value, lowercased: value?.toLowerCase() });
                         if (value && value.toLowerCase() === 'true') {
                             options.hideDescription = true;
+                            this.log('hideDescription set to true');
+                        } else {
+                            this.log('hideDescription not set to true', { 
+                                reason: !value ? 'no value' : 'value not "true"',
+                                valueProvided: value
+                            });
                         }
                         break;
                 }
             }
+            
+            this.log('Final parsed options:', options);
         } catch (error) {
             // This is an actual error in parsing, so we'll log it as an error
             this.log("Failed to parse Linear block options", error, true);
@@ -163,6 +176,11 @@ export class LinearProcessor extends Component {
 
             // Add description if available and not hidden
             if (!options.hideDescription && issue.description) {
+                this.log('Rendering description', { 
+                    hideDescription: options.hideDescription,
+                    hasDescription: !!issue.description,
+                    descriptionLength: issue.description?.length
+                });
                 const descriptionEl = issueEl.createDiv({ cls: "linear-issue-description" });
                 await MarkdownRenderer.renderMarkdown(
                     issue.description,
@@ -170,6 +188,12 @@ export class LinearProcessor extends Component {
                     ctx.sourcePath,
                     this
                 );
+            } else {
+                this.log('Skipping description', {
+                    hideDescription: options.hideDescription,
+                    hasDescription: !!issue.description,
+                    reason: !issue.description ? 'no description' : 'hideDescription is true'
+                });
             }
         } catch (error) {
             this.log('Failed to render issue', error, true);

@@ -95,12 +95,23 @@ Each status is displayed with a color-coded badge matching your Linear workflow 
 
 ### Debug Mode
 
-The plugin includes comprehensive debug logging (prefixed with 🔄) in the developer console, helping you troubleshoot:
+The plugin includes a debug mode that can be enabled in settings. When enabled, it provides comprehensive logging (prefixed with 🔄) in the developer console, helping you troubleshoot:
+- Plugin initialization and settings changes
 - API requests and responses
-- Filter applications
+- Filter applications and option parsing
 - Due date calculations
 - Status matching
 - Team identification
+- Description rendering decisions
+
+To use debug mode:
+1. Open Obsidian Settings
+2. Go to Community Plugins > Linear
+3. Enable the "Debug Mode" toggle
+4. Open the developer console (Ctrl+Shift+I or Cmd+Option+I)
+5. Look for messages prefixed with 🔄
+
+Debug logs are only shown when debug mode is enabled, keeping your console clean during normal operation.
 
 ### Error Handling
 
@@ -109,6 +120,7 @@ The plugin includes comprehensive error handling:
 - Graceful fallback for invalid status names
 - Automatic status name normalization
 - Cache management for workflow states
+- Clear distinction between expected conditions and actual errors
 
 ## Installation
 
@@ -125,6 +137,7 @@ The plugin includes comprehensive error handling:
 1. Get your Linear API key from Linear's settings
 2. Open the plugin settings in Obsidian
 3. Enter your Linear API key
+4. (Optional) Enable debug mode to see detailed logs in the developer console
 
 ## Development
 
