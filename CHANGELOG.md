@@ -1,7 +1,6 @@
 # Changelog
 
-## [1.1.0] - 2025
-
+## [1.1.0]
 ### Added
 - Debug mode toggle in settings
   - Control when debug logs appear in console
@@ -26,12 +25,18 @@
   - Lists and headers
 - Status colors matching Linear workflow states
 - Cache management for workflow states
+- Enhanced error handling and logging
+  - Better distinction between errors and expected conditions
+  - Comprehensive debug logging with 🔄 prefix
+  - Improved error messages and context
 
 ### Fixed
 - Date sorting now properly handles issues without due dates
 - Build configuration and entry points
 - TypeScript type errors in LinearService and main components
 - Console logging now respects debug mode setting
+- Improved error message clarity
+- Better error handling in UI components
 
 ### Changed
 - Reorganized project structure for better maintainability
