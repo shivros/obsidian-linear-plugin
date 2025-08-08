@@ -12,10 +12,9 @@ export class LinearSettingsTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-        containerEl.createEl('h2', { text: 'Linear Settings' });
 
         new Setting(containerEl)
-            .setName('API Key')
+            .setName('API key')
             .setDesc('Your Linear API key')
             .addText(text => text
                 .setPlaceholder('Enter your API key')
@@ -26,7 +25,7 @@ export class LinearSettingsTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Debug Mode')
+            .setName('Debug mode')
             .setDesc('Enable debug logging in the console')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.debugMode)

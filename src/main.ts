@@ -5,7 +5,6 @@ import { LinearProcessor } from './processors/LinearProcessor';
 
 export default class LinearPlugin extends Plugin {
     settings: LinearPluginSettings;
-    private processor: LinearProcessor;
 
     private log(message: string, data?: any, isError: boolean = false) {
         if (!this.settings?.debugMode) return;
@@ -38,14 +37,11 @@ export default class LinearPlugin extends Plugin {
                 return;
             }
 
-            if (!this.processor) {
-                this.log('Creating new Linear processor');
-                this.processor = new LinearProcessor(this.settings);
-            }
-
             try {
                 const div = el.createDiv();
-                await this.processor.process(source, div, ctx);
+                const processor = new LinearProcessor(this.settings, div, this.app);
+                ctx.addChild(processor);
+                await processor.process(source, div, ctx);
             } catch (error) {
                 this.log('Failed to process Linear block', error, true);
                 el.createEl('div', {

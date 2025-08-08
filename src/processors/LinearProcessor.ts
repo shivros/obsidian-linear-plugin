@@ -1,13 +1,14 @@
-import { MarkdownPostProcessorContext, MarkdownRenderer, Component } from "obsidian";
+import { MarkdownPostProcessorContext, MarkdownRenderer, MarkdownRenderChild, App } from "obsidian";
 import { LinearService, IssueOptions } from "../services/LinearService";
 import type { Issue, WorkflowState } from "@linear/sdk";
 import { LinearPluginSettings } from '../settings';
+import { parseYaml } from 'obsidian';
 
-export class LinearProcessor extends Component {
+export class LinearProcessor extends MarkdownRenderChild {
     private linearService: LinearService;
 
-    constructor(private settings: LinearPluginSettings) {
-        super();
+    constructor(private settings: LinearPluginSettings, containerEl: HTMLElement, private app: App) {
+        super(containerEl);
         this.linearService = new LinearService(settings);
     }
 
@@ -26,64 +27,44 @@ export class LinearProcessor extends Component {
         const options: IssueOptions = {};
         
         try {
-            // Split the source into lines and process each line
-            const lines = source.trim().split('\n');
-            this.log('Parsing options from lines:', lines);
+            // Use parseYaml to parse the source
+            const parsed = parseYaml(source.trim());
+            this.log('Parsing options from YAML:', parsed);
             
-            for (const line of lines) {
-                const [key, value] = line.split(':').map(s => s.trim());
-                this.log('Processing option line:', { key, value });
+            if (parsed && typeof parsed === 'object') {
+                if (parsed.limit && typeof parsed.limit === 'number' && parsed.limit > 0) {
+                    options.limit = parsed.limit;
+                }
                 
-                switch (key) {
-                    case 'limit':
-                        const limitValue = parseInt(value);
-                        if (!isNaN(limitValue) && limitValue > 0) {
-                            options.limit = limitValue;
-                        }
-                        break;
-                    case 'team':
-                        if (value) {
-                            options.teamName = value;
-                        }
-                        break;
-                    case 'status':
-                        if (value) {
-                            options.status = value;
-                        }
-                        break;
-                    case 'assignee':
-                        if (value) {
-                            options.assigneeEmail = value;
-                        }
-                        break;
-                    case 'sorting':
-                        if (value) {
-                            const sortValue = value.toLowerCase();
-                            if (sortValue === 'date' || sortValue === 'datedescending') {
-                                options.sorting = {
-                                    field: 'date',
-                                    direction: 'desc'
-                                };
-                            } else if (sortValue === 'dateascending') {
-                                options.sorting = {
-                                    field: 'date',
-                                    direction: 'asc'
-                                };
-                            }
-                        }
-                        break;
-                    case 'hideDescription':
-                        this.log('Processing hideDescription option:', { value, lowercased: value?.toLowerCase() });
-                        if (value && value.toLowerCase() === 'true') {
-                            options.hideDescription = true;
-                            this.log('hideDescription set to true');
-                        } else {
-                            this.log('hideDescription not set to true', { 
-                                reason: !value ? 'no value' : 'value not "true"',
-                                valueProvided: value
-                            });
-                        }
-                        break;
+                if (parsed.team && typeof parsed.team === 'string') {
+                    options.teamName = parsed.team;
+                }
+                
+                if (parsed.status && typeof parsed.status === 'string') {
+                    options.status = parsed.status;
+                }
+                
+                if (parsed.assignee && typeof parsed.assignee === 'string') {
+                    options.assigneeEmail = parsed.assignee;
+                }
+                
+                if (parsed.sorting && typeof parsed.sorting === 'string') {
+                    const sortValue = parsed.sorting.toLowerCase();
+                    if (sortValue === 'date' || sortValue === 'datedescending') {
+                        options.sorting = {
+                            field: 'date',
+                            direction: 'desc'
+                        };
+                    } else if (sortValue === 'dateascending') {
+                        options.sorting = {
+                            field: 'date',
+                            direction: 'asc'
+                        };
+                    }
+                }
+                
+                if (parsed.hideDescription && parsed.hideDescription === true) {
+                    options.hideDescription = true;
                 }
             }
             
@@ -182,7 +163,8 @@ export class LinearProcessor extends Component {
                     descriptionLength: issue.description?.length
                 });
                 const descriptionEl = issueEl.createDiv({ cls: "linear-issue-description" });
-                await MarkdownRenderer.renderMarkdown(
+                await MarkdownRenderer.render(
+                    this.app,
                     issue.description,
                     descriptionEl,
                     ctx.sourcePath,

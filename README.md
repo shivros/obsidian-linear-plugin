@@ -1,4 +1,4 @@
-# Obsidian Linear Plugin
+# Linear Plugin for Obsidian
 
 This plugin integrates Linear (https://linear.app) with Obsidian (https://obsidian.md), allowing you to embed and filter Linear issues directly in your notes.
 
@@ -8,7 +8,7 @@ This plugin integrates Linear (https://linear.app) with Obsidian (https://obsidi
 
 ### Display Options
 
-You can customize how issues are displayed using options in the code block:
+You can customize how issues are displayed using YAML options in the code block:
 
 #### Limit Number of Issues
 

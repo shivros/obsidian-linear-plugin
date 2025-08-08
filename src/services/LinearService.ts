@@ -92,12 +92,21 @@ export class LinearService {
     private async getTeamIdByName(teamName: string): Promise<string | null> {
         this.log(`Looking for team: "${teamName}"`);
         
+        // Check cache first
+        const normalizedTeamName = teamName.toLowerCase();
+        if (this.teamCache.has(normalizedTeamName)) {
+            const cachedId = this.teamCache.get(normalizedTeamName);
+            this.log(`Found team "${teamName}" in cache with ID: ${cachedId}`);
+            return cachedId || null;
+        }
+        
         try {
             const teams = await this.getTeams();
             for (const team of teams) {
                 const name = team.name.toLowerCase();
-                this.teamCache.set(name, team.id); // Cache for future use
-                if (name === teamName.toLowerCase()) {
+                if (name === normalizedTeamName) {
+                    // Cache the found team
+                    this.teamCache.set(normalizedTeamName, team.id);
                     this.log(`Found team "${teamName}" with ID: ${team.id}`);
                     return team.id;
                 }
