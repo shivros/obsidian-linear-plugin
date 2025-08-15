@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-linear",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "Integrate Linear issues with advanced filtering, sorting, and visual enhancements in Obsidian",
 	"main": "main.js",
 	"scripts": {
