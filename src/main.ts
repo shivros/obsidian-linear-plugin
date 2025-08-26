@@ -29,13 +29,6 @@ export default class LinearPlugin extends Plugin {
         // Register Linear code block processor
         this.registerMarkdownCodeBlockProcessor('linear', async (source, el, ctx) => {
             this.log('Processing Linear code block', { source });
-            
-            if (!this.settings.apiKey) {
-                this.log('No API key configured - cannot process block');
-                const div = el.createDiv();
-                div.setText('Please configure your Linear API key in settings.');
-                return;
-            }
 
             try {
                 const div = el.createDiv();
@@ -60,6 +53,15 @@ export default class LinearPlugin extends Plugin {
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+
+        if (!this.settings.integrations?.length) {
+            this.settings.integrations = [{ name: 'default', apiKey: '' }];
+        }
+
+        if (!this.settings.defaultIntegration || !this.settings.integrations.find(i => i.name === this.settings.defaultIntegration)) {
+            this.settings.defaultIntegration = this.settings.integrations[0].name;
+        }
+
         this.log('Settings loaded', this.settings);
     }
 

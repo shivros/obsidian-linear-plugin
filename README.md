@@ -63,6 +63,16 @@ To show only issue titles without descriptions, use the `hideDescription` option
 hideDescription: true
 ```
 
+#### Select Integration
+
+If you have multiple Linear integrations configured, choose which one to use with the `integration` option:
+
+```linear
+integration: work
+```
+
+If this option is omitted, the plugin uses your default integration.
+
 ### Combining Options
 
 You can combine multiple options to create specific views:
@@ -134,10 +144,11 @@ The plugin includes comprehensive error handling:
 
 ## Configuration
 
-1. Get your Linear API key from Linear's settings
+1. Get your Linear API key(s) from Linear's settings
 2. Open the plugin settings in Obsidian
-3. Enter your Linear API key
-4. (Optional) Enable debug mode to see detailed logs in the developer console
+3. Add one or more integrations with unique names and their API keys
+4. Choose which integration should be the default
+5. (Optional) Enable debug mode to see detailed logs in the developer console
 
 ## Development
 
