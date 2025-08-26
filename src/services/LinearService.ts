@@ -1,6 +1,5 @@
 import { LinearClient, Issue, Team, WorkflowState, LinearRawResponse } from "@linear/sdk";
 import { Notice } from "obsidian";
-import { LinearPluginSettings } from '../settings';
 
 interface WorkflowStateNode {
     id: string;
@@ -32,6 +31,7 @@ export interface IssueOptions {
         direction: 'asc' | 'desc';
     };
     hideDescription?: boolean;
+    integration?: string;
 }
 
 export class LinearService {
@@ -43,9 +43,9 @@ export class LinearService {
     } | null = null;
     private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-    constructor(private settings: LinearPluginSettings) {
-        if (settings.apiKey) {
-            this.client = new LinearClient({ apiKey: settings.apiKey });
+    constructor(private apiKey: string, private debugMode: boolean) {
+        if (apiKey) {
+            this.client = new LinearClient({ apiKey });
             this.log('Service initialized with API key');
         } else {
             this.log('Service initialized without API key');
@@ -53,7 +53,7 @@ export class LinearService {
     }
 
     private log(message: string, data?: any, isError: boolean = false) {
-        if (!this.settings.debugMode) return;
+        if (!this.debugMode) return;
         
         const prefix = '🔄 Linear Plugin: ';
         if (isError) {
@@ -64,12 +64,12 @@ export class LinearService {
     }
 
     private async ensureClient(): Promise<LinearClient> {
-        if (!this.settings.apiKey) {
+        if (!this.apiKey) {
             throw new Error("Linear API key not configured");
         }
 
         if (!this.client) {
-            this.client = new LinearClient({ apiKey: this.settings.apiKey });
+            this.client = new LinearClient({ apiKey: this.apiKey });
             this.log('Created new Linear client');
         }
 

@@ -1,15 +1,12 @@
 import { MarkdownPostProcessorContext, MarkdownRenderer, MarkdownRenderChild, App } from "obsidian";
 import { LinearService, IssueOptions } from "../services/LinearService";
-import type { Issue, WorkflowState } from "@linear/sdk";
+import type { Issue } from "@linear/sdk";
 import { LinearPluginSettings } from '../settings';
 import { parseYaml } from 'obsidian';
 
 export class LinearProcessor extends MarkdownRenderChild {
-    private linearService: LinearService;
-
     constructor(private settings: LinearPluginSettings, containerEl: HTMLElement, private app: App) {
         super(containerEl);
-        this.linearService = new LinearService(settings);
     }
 
     private log(message: string, data?: any, isError: boolean = false) {
@@ -46,6 +43,10 @@ export class LinearProcessor extends MarkdownRenderChild {
                 
                 if (parsed.assignee && typeof parsed.assignee === 'string') {
                     options.assigneeEmail = parsed.assignee;
+                }
+
+                if (parsed.integration && typeof parsed.integration === 'string') {
+                    options.integration = parsed.integration;
                 }
                 
                 if (parsed.sorting && typeof parsed.sorting === 'string') {
@@ -195,7 +196,30 @@ export class LinearProcessor extends MarkdownRenderChild {
             const options = this.parseOptions(source);
             this.log('Parsed options:', options);
             
-            const issues = await this.linearService.getIssues(options);
+            const integrationName = options.integration || this.settings.defaultIntegration;
+            const integration = this.settings.integrations.find(i => i.name === integrationName);
+
+            if (!integration) {
+                el.empty();
+                el.createDiv({
+                    cls: 'linear-error',
+                    text: `Integration "${integrationName}" not found.`
+                });
+                return;
+            }
+
+            if (!integration.apiKey) {
+                el.empty();
+                el.createDiv({
+                    cls: 'linear-error',
+                    text: `API key for integration "${integrationName}" is not configured.`
+                });
+                return;
+            }
+
+            const service = new LinearService(integration.apiKey, this.settings.debugMode);
+            const { integration: _, ...serviceOptions } = options;
+            const issues = await service.getIssues(serviceOptions);
             this.log('Fetched issues:', issues);
 
             el.empty();
