@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.1.2]
+### Added
+- Support for fetching and embedding a Linear issue by its ID using a code block (`id: ISSUE_ID`).
+  - Example:
+    ````markdown
+    ```linear
+    id: LIN-123
+    ```
+    ````
+  - You can also use `issueId` as the key.
+  - This allows you to reference or embed individual issues from your team's projects directly into your Obsidian notes.
+- Support for fetching and embedding multiple Linear issues by their IDs using a code block (`ids:` YAML array).
+  - Example:
+    ````markdown
+    ```linear
+    ids:
+      - LIN-123
+      - LIN-456
+      - LIN-789
+    ```
+    ````
+  - Each listed issue will be fetched and rendered in the order provided.
+
 ## [1.1.0]
 ### Added
 - Debug mode toggle in settings

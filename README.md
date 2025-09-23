@@ -6,6 +6,40 @@ This plugin integrates Linear (https://linear.app) with Obsidian (https://obsidi
 
 ## Features
 
+- Fetch and embed one or more Linear issues by their IDs directly in your notes
+
+### Fetch Linear Issues by ID
+
+You can pull one or more specific Linear issues into your notes using a code block with the issue IDs:
+
+#### Single Issue
+
+````markdown
+```linear
+id: ISSUE_ID
+```
+````
+
+- Replace `ISSUE_ID` with the actual Linear issue ID (e.g., `1234`, `LIN-123`, or the unique identifier from Linear).
+- You can also use `issueId` as the key if you prefer.
+
+#### Multiple Issues
+
+````markdown
+```linear
+ids:
+  - LIN-123
+  - LIN-456
+  - LIN-789
+```
+````
+
+- List as many IDs as you want under `ids:` (YAML array format).
+- The plugin will fetch and render each issue in the order listed.
+- If an ID is not found, an error message will be shown for that ID.
+
+This is useful for referencing or embedding individual issues from your team's projects directly into your Obsidian notes.
+
 ### Display Options
 
 You can customize how issues are displayed using YAML options in the code block:
