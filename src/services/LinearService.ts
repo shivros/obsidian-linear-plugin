@@ -334,4 +334,23 @@ export class LinearService {
             return [];
         }
     }
+
+    async getIssueById(issueId: string): Promise<Issue | null> {
+        try {
+            this.log(`Fetching issue by ID: ${issueId}`);
+            const client = await this.ensureClient();
+            const issue = await client.issue(issueId);
+            if (!issue) {
+                this.log(`No issue found for ID: ${issueId}`);
+                new Notice(`No Linear issue found for ID: ${issueId}`);
+                return null;
+            }
+            this.log('Fetched issue:', issue);
+            return issue;
+        } catch (error) {
+            this.log('Failed to fetch Linear issue by ID - API error', error, true);
+            new Notice(`Failed to fetch Linear issue for ID: ${issueId}`);
+            return null;
+        }
+    }
 } 

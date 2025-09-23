@@ -194,18 +194,67 @@ export class LinearProcessor extends MarkdownRenderChild {
         try {
             const options = this.parseOptions(source);
             this.log('Parsed options:', options);
-            
+
+            // Parse YAML once for all ID-related checks
+            let parsed: any = {};
+            try {
+                parsed = parseYaml(source.trim());
+            } catch {}
+
+            // Support fetching multiple issues by IDs
+            const issueIds = parsed.ids && Array.isArray(parsed.ids) ? parsed.ids : null;
+            if (issueIds && issueIds.length > 0) {
+                this.log('Fetching multiple issues by IDs:', issueIds);
+                el.empty();
+                const container = el.createDiv({ cls: "linear-issues-container" });
+                let found = false;
+                for (const id of issueIds) {
+                    if (typeof id !== 'string') continue;
+                    const issue = await this.linearService.getIssueById(id);
+                    if (issue) {
+                        found = true;
+                        await this.renderIssue(container, issue, options, ctx);
+                    } else {
+                        container.createDiv({
+                            cls: 'linear-error',
+                            text: `No Linear issue found for ID: ${id}`
+                        });
+                    }
+                }
+                if (!found) {
+                    el.createEl("p", { text: `No Linear issues found for the provided IDs.` });
+                }
+                return;
+            }
+
+            // Support fetching a single issue by ID
+            // Allow both 'id' and 'issueId' as keys for flexibility
+            const issueId = parsed.id || parsed.issueId;
+            if (issueId && typeof issueId === 'string') {
+                this.log('Fetching single issue by ID:', issueId);
+                const issue = await this.linearService.getIssueById(issueId);
+                el.empty();
+                if (issue) {
+                    const container = el.createDiv({ cls: "linear-issues-container" });
+                    await this.renderIssue(container, issue, options, ctx);
+                } else {
+                    el.createEl("p", { text: `No Linear issue found for ID: ${issueId}` });
+                }
+                return;
+            }
+
+            // Fallback: fetch list of issues as before
             const issues = await this.linearService.getIssues(options);
             this.log('Fetched issues:', issues);
 
             el.empty();
             if (!issues.length) {
                 const messages: string[] = [];
-                if (options.teamName) messages.push(`team "${options.teamName}"`);
-                if (options.status) messages.push(`status "${options.status}"`);
-                if (options.assigneeEmail) messages.push(`assignee "${options.assigneeEmail}"`);
+                if (options.teamName) messages.push(`team \"${options.teamName}\"`);
+                if (options.status) messages.push(`status \"${options.status}\"`);
+                if (options.assigneeEmail) messages.push(`assignee \"${options.assigneeEmail}\"`);
                 if (options.sorting) messages.push(`sorted by ${options.sorting.field} ${options.sorting.direction}`);
-                
+
                 const message = messages.length 
                     ? `No issues found for ${messages.join(" and ")}` 
                     : "No issues found";
