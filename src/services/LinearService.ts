@@ -22,11 +22,43 @@ interface WorkflowStateQueryResponse {
     };
 }
 
+export interface DateRange {
+    start: string;
+    end: string;
+}
+
+export interface DateFilter {
+    before?: string;
+    after?: string;
+}
+
+export function isDateFilter(value: unknown): value is DateFilter {
+    if (!value || typeof value !== 'object') {
+        return false;
+    }
+
+    const filter = value as {
+        before?: unknown;
+        after?: unknown;
+    };
+
+    if (filter.before !== undefined && typeof filter.before !== 'string') {
+        return false;
+    }
+
+    if (filter.after !== undefined && typeof filter.after !== 'string') {
+        return false;
+    }
+
+    return filter.before !== undefined || filter.after !== undefined;
+}
+
 export interface IssueOptions {
     limit?: number;
     teamName?: string;
     status?: string;
     assigneeEmail?: string;
+    dueDateFilter?: DateFilter;
     sorting?: {
         field: 'date';
         direction: 'asc' | 'desc';
@@ -269,6 +301,26 @@ export class LinearService {
             if (options?.assigneeEmail) {
                 filter.assignee = { email: { eq: options.assigneeEmail } };
                 this.log(`Added assignee filter:`, filter.assignee);
+            }
+
+            const parsedDueDateFilter = options?.dueDateFilter;
+            if (isDateFilter(parsedDueDateFilter)) {
+                const dueDateFilter: DateFilter = parsedDueDateFilter;
+                const dueDateRange: Record<string, string> = {};
+
+                if (dueDateFilter.after) {
+                    dueDateRange.gte = dueDateFilter.after;
+                    this.log('Added due date filter (after):', dueDateFilter.after);
+                }
+
+                if (dueDateFilter.before) {
+                    dueDateRange.lt = dueDateFilter.before;
+                    this.log('Added due date filter (before):', dueDateFilter.before);
+                }
+
+                if (Object.keys(dueDateRange).length > 0) {
+                    filter.dueDate = dueDateRange;
+                }
             }
 
             this.log('Fetching issues with filter:', filter);

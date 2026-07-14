@@ -1,5 +1,5 @@
 import { MarkdownPostProcessorContext, MarkdownRenderer, MarkdownRenderChild, App } from "obsidian";
-import { LinearService, IssueOptions } from "../services/LinearService";
+import { LinearService, IssueOptions, isDateFilter, DateFilter, DateRange } from "../services/LinearService";
 import type { Issue, WorkflowState } from "@linear/sdk";
 import { LinearPluginSettings } from '../settings';
 import { parseYaml } from 'obsidian';
@@ -25,12 +25,12 @@ export class LinearProcessor extends MarkdownRenderChild {
 
     private parseOptions(source: string): IssueOptions {
         const options: IssueOptions = {};
-        
+
         try {
             // Use parseYaml to parse the source
             const parsed = parseYaml(source.trim());
             this.log('Parsing options from YAML:', parsed);
-            
+
             if (parsed && typeof parsed === 'object') {
                 if (parsed.limit && typeof parsed.limit === 'number' && parsed.limit > 0) {
                     options.limit = parsed.limit;
@@ -47,7 +47,12 @@ export class LinearProcessor extends MarkdownRenderChild {
                 if (parsed.assignee && typeof parsed.assignee === 'string') {
                     options.assigneeEmail = parsed.assignee;
                 }
-                
+
+                const dueDateFilter = this.parseDueDateOptions(parsed);
+                if (dueDateFilter) {
+                    options.dueDateFilter = dueDateFilter;
+                }
+
                 if (parsed.sorting && typeof parsed.sorting === 'string') {
                     const sortValue = parsed.sorting.toLowerCase();
                     if (sortValue === 'date' || sortValue === 'datedescending') {
@@ -75,6 +80,76 @@ export class LinearProcessor extends MarkdownRenderChild {
         }
 
         return options;
+    }
+
+    private parseDueDateOptions(parsed: any): DateFilter | undefined {
+        if (!parsed || typeof parsed !== 'object') {
+            return undefined;
+        }
+
+        const dueDateFilter: DateFilter = {};
+
+        if (parsed.dueAfter && typeof parsed.dueAfter === 'string') {
+            const range = this.parseDateValue(parsed.dueAfter);
+            if (range) {
+                dueDateFilter.after = range.start;
+                this.log('Parsed dueAfter option:', { raw: parsed.dueAfter, start: range.start });
+            } else {
+                this.log('Failed to parse dueAfter option', parsed.dueAfter, true);
+            }
+        }
+
+        if (parsed.dueBefore && typeof parsed.dueBefore === 'string') {
+            const range = this.parseDateValue(parsed.dueBefore);
+            if (range) {
+                dueDateFilter.before = range.start;
+                this.log('Parsed dueBefore option:', { raw: parsed.dueBefore, start: range.start });
+            } else {
+                this.log('Failed to parse dueBefore option', parsed.dueBefore, true);
+            }
+        }
+
+        return isDateFilter(dueDateFilter) ? dueDateFilter : undefined;
+    }
+
+    private parseDateValue(value: string): DateRange | null {
+        const normalized = value.trim().toLowerCase();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let targetDate: Date | null = null;
+
+        if (normalized === 'today') {
+            targetDate = new Date(today);
+        } else if (normalized === 'tomorrow') {
+            targetDate = new Date(today);
+            targetDate.setDate(targetDate.getDate() + 1);
+        } else if (normalized === 'yesterday') {
+            targetDate = new Date(today);
+            targetDate.setDate(targetDate.getDate() - 1);
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+            targetDate = new Date(`${normalized}T00:00:00`);
+        } else {
+            const parsedDate = new Date(value);
+            if (!isNaN(parsedDate.getTime())) {
+                targetDate = parsedDate;
+            }
+        }
+
+        if (!targetDate) {
+            return null;
+        }
+
+        const start = new Date(targetDate);
+        start.setHours(0, 0, 0, 0);
+
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+
+        return {
+            start: start.toISOString(),
+            end: end.toISOString()
+        };
     }
 
     private async renderIssue(container: HTMLDivElement, issue: Issue, options: IssueOptions, ctx: MarkdownPostProcessorContext) {

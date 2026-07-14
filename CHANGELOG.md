@@ -2,6 +2,7 @@
 
 ## [1.1.2]
 ### Added
+- New due date filters for `dueAfter` and `dueBefore` to narrow results to a specific window or day
 - Support for fetching and embedding a Linear issue by its ID using a code block (`id: ISSUE_ID`).
   - Example:
     ````markdown

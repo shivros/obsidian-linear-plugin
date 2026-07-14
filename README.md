@@ -80,6 +80,24 @@ To show issues assigned to a specific person, use the `assignee` option with the
 assignee: user@example.com
 ```
 
+#### Filter by Due Date
+
+You can narrow results by due date using the `dueAfter` and `dueBefore` options. These values accept either an ISO date (`YYYY-MM-DD`) or the keywords `today`, `tomorrow`, and `yesterday`.
+
+```linear
+dueAfter: 2024-05-01      # Issues due on or after May 1, 2024
+dueBefore: tomorrow       # Issues due before tomorrow
+```
+
+To focus on a single day, set `dueAfter` to the day you care about and `dueBefore` to the following day:
+
+```linear
+dueAfter: today
+dueBefore: tomorrow       # Issues due today by combining both filters
+```
+
+Combine `dueAfter` and `dueBefore` to create date ranges or target a specific day.
+
 #### Sort by Due Date
 
 To sort issues by their due date, use the `sorting` option:
